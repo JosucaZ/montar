@@ -8,7 +8,7 @@ Para adicionar o script ao ambiente, siga os passos abaixo:
 
 1. Clone este repositório para o seu sistema local:
     ```bash
-    git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/JosucaZ/montar.git )
+    git clone https://github.com/JosucaZ/montar.git
     ```
 
 2. Mova o script para o diretório '/usr/sbin/':
