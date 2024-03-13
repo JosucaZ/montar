@@ -1,0 +1,360 @@
+#!/bin/bash
+# Feito por Josué Suptitz:
+# instagram: @josucazz
+
+
+
+# READ ME:
+# Caso o codigo não funione tente instalar:
+# sudo
+# findmnt
+# fdisk
+##################################################
+
+temp1="true"
+temp2="true"
+if [ $EUID != 0 ]; then
+        temp1="false"
+fi
+if [ $USER != "root" ]; then
+	temp2="false"
+fi 
+
+if [ $temp1 = "false" ] && [ $temp2 = "false" ]; then
+	echo -e "\nPor favor execute como root...\n"
+	exit
+fi
+
+
+if which tput | grep -q tput; then
+	tput=1
+else
+	tput=0
+fi
+
+number=1
+while IFS= read -r line; do
+	echo "  $number - $line"
+	number=$(($number+1))
+done < <(fdisk -l | grep '^/dev/')
+number=$(($number-1))
+numberbkp=$number
+echo "NUMBER: $number"
+
+respEmBranco() {
+	if [ $tput = 1 ]; then
+		tput civis
+		while [ -z "$resp" ]; do
+			tput cuu1
+			tput el
+			tput cnorm
+			read -p ": " resp			
+			if ! [[ $resp =~ ^[0-9]+$ ]] || [ "$resp" -eq 0 ] || [ "$resp" -gt "$number" ]; then
+				resp=""
+			fi
+		done
+		tput cnorm
+	else
+		while [ -z "$resp" ]; do
+			read -p "Por favor informe uma particao: " resp
+		done
+	fi
+	tput cnorm
+}
+
+mntEmBranco() {
+	if [ $tput = 1 ]; then
+		tput civis
+		while [ -z "$PontoMnt" ]; do
+				tput cuu1
+				tput el
+				tput cnorm
+				read -e -p ": " PontoMnt
+		done
+
+		tput cnorm
+	else
+		while [ -z "$PontoMnt" ]; do
+			read -e -p "caminho de montagem: " PontoMnt
+		done
+	fi
+	tput cnorm
+}
+
+
+clear
+echo -e "\nMontar Partições\nby:\n"
+echo " :::::::::::  ::::::::   ::::::::  :::    :::  ::::::::      :::     ::::::::: ::::::::: "
+echo "     :+:     :+:    :+: :+:    :+: :+:    :+: :+:    :+:   :+: :+:        :+:       :+:  "
+echo "     +:+     +:+    +:+ +:+        +:+    +:+ +:+         +:+   +:+      +:+       +:+   "
+echo "     +#+     +#+    +:+ +#++:++#++ +#+    +:+ +#+        +#++:++#++:    +#+       +#+    "
+echo "     +#+     +#+    +#+        +#+ +#+    +#+ +#+        +#+     +#+   +#+       +#+     "
+echo " #+# #+#     #+#    #+# #+#    #+# #+#    #+# #+#    #+# #+#     #+#  #+#       #+#      "
+echo "  #####       ########   ########   ########   ########  ###     ### ######### ######### "
+echo ""
+
+
+echo -e "\nQual partição deseja montar?:\n"
+if apt-mark showinstall sudo | grep -q "sudo"; then
+	sudo=1
+else
+	sudo=2	
+fi
+
+if [ $sudo = 2 ]; then	
+	number=1
+	fdisk -l | grep '^/dev/' | while IFS= read -r line; do
+		echo "  $number - $line"
+		number=$(($number+1))
+
+	done
+	echo ""
+	respEmBranco "$resp"
+fi
+
+if [ $sudo = 1 ]; then
+    number=1
+	while IFS= read -r line; do
+		echo "  $number - $line"
+		number=$(($number+1))
+	done < <(sudo fdisk -l | grep '^/dev/')
+	number=$(($number-1))
+	echo ""
+	respEmBranco "$resp"
+	
+
+fi
+
+resp=$resp"p"
+particao=$(fdisk -l | grep '^/dev/' | cut -d" " -f1 | sed -n $resp)
+
+if mount | grep -q "$particao"; then
+	ERROR=1
+else
+	ERROR=0
+fi
+if [ $sudo = 2 ] && [ $ERROR = 1 ]; then
+	while [ $ERROR = 1 ]; do	
+		echo -e "\nA partição $particao ja esta montada..."
+		echo -e "selecione outra: "
+		sudo fdisk -l | grep '^/dev/' | while IFS= read -r line; do
+			echo "  $number - $line"
+			number=$(($number+1))
+		done
+		echo ""
+		respEmBranco "$resp"
+		
+		resp=$resp"p"
+		particao=$(sudo fdisk -l | grep '^/dev/' | cut -d" " -f1 | sed -n $resp)
+	done
+	if mount | grep -q "$particao"; then
+		ERROR=1
+	else
+		ERROR=0
+	fi	
+fi
+
+if [ $sudo = 1 ] && [ $ERROR = 1 ]; then
+	while [ $ERROR = 1 ]; do
+		echo -e "\nA particao $particao ja esta montada em: "
+		MntEm=$(sudo findmnt $particao | sed -n "2p" | cut -d" " -f1)
+		echo -e "\n$MntEm\n"
+		if [ $MntEm = "/" ]; then
+			echo -e "Você não pode montar/desmontar a partição raiz do sistema...\n"
+			sleep 3
+		fi
+		echo -e "Deseja:\n  1 - Desmonta-la (Certifique-se não ser partição crucial do sistema!)\n  2 - Selecionar outra\n"
+       	        echo ""         
+       	        if [ $MntEm = "/" ]; then
+			resp=2
+		else
+       	        	read -p ": " resp
+			number=2
+	       	        respEmBranco "$resp"
+			number=$numberbkp
+		fi	
+		case $resp in
+			"1")
+				umount $MntEm
+				if mount | grep -q "$particao"; then
+				        ERROR=1
+					echo -e "\n"
+					sleep 2
+						echo -e "Desmontagem falhou.. talvez a unidade esteja em uso! tente fechar programas que estejam a usando."
+					echo -e "\nVocê pode tentar matar os seguintes processos:\n"
+					sudo lsof +D $MntEm 2>/dev/null
+					pid=$(sudo lsof +D $MntEm 2>/dev/null | grep -i $MntEm | cut -d" " -f2)
+					echo -e "\nDeseja matar estes processos?\nS = Sim\nN = Não\n"
+					PontoMnt="" #Estou usando $PontoNmt porq fiquei com preguiça de trocar a função...
+					mntEmBranco "$PontoMnt"
+					if [ $PontoMnt = S ] || [ $PontoMnt = s ]; then
+						for i in $pid; do
+        						kill $pid
+						done
+						sleep 2
+						umount $MntEm 2>/dev/null
+						if mount | grep -q "$particao"; then
+							ERROR=1
+						else
+							ERROR=0
+						fi
+					fi
+				else
+				    	echo -e "$MntEm desmontada!"
+				       	ERROR=0
+				fi
+				PontoMnt=""
+				sleep 3
+				;;
+			"2")
+				echo -e "selecione outra: "
+				echo ""
+				number=1
+	       			while IFS= read -r line; do
+			 	       echo "  $number - $line"
+			        	number=$(($number+1))
+				done < <(sudo fdisk -l | grep '^/dev/')
+	        		number=$numberbkp
+				echo ""
+				resp=""
+				respEmBranco ""
+
+				resp=$resp"p"
+				particao=$(sudo fdisk -l | grep '^/dev/' | cut -d" " -f1 | sed -n $resp)
+				
+		      		if mount | grep -q "$particao"; then
+						ERROR=1
+					else
+						ERROR=0
+				fi
+				;;
+			*)
+				sleep 0
+				;;
+		esac
+	
+	done
+fi
+
+
+
+
+
+
+#############
+echo -e "\nPartição selecionada: $particao"
+
+echo -e "\nOnde deseja montar?"
+echo -e "Diretorios no /media: \n$(ls -l /media)\n"
+echo "Passe o caminho completo: " 
+echo ""
+mntEmBranco "$PontoMnt"
+
+echo "path escolhido: $PontoMnt"
+
+mountpoint $PontoMnt > /dev/null
+if [ $? = 0 ]; then
+	error=0
+else
+	error=1
+fi
+
+while [ $error = 0 ]; do
+	echo "Ja existe uma partição montada neste diretório informe outro: " 
+	echo ""
+	mntEmBranco "$PontoMnt"
+	mountpoint $PontoMnt > /dev/null
+	if [ $? = 0 ]; then
+       		error=0
+	else
+		error=1
+	fi
+done
+
+
+if [ -d $PontoMnt ]; then
+	sleep 0
+else		
+	CheckMnt="0"
+	while [ $CheckMnt = "0" ]; do	
+		echo -e "\nO Diretório informado não existe!\nVocê deseja:\n  1 - Informar outro diretório\n  2 - Criar o diretório informado\n  3 - Cancelar operação\n\n"
+		echo -e "\nDiretório atual: $(pwd)\n"
+		number=3		
+		resp=""
+		respEmBranco "$resp"
+		
+		number=$numberbkp
+		
+		case $resp in
+			"1")
+				echo "Informe outro dirétorio: "
+				echo ""
+				PontoMnt=""
+				mntEmBranco "$PontoMnt"
+				
+				if [ ! -d $PontoMnt ]; then
+					CheckMnt="0"
+				else
+					CheckMnt="1"
+				fi
+				;;
+			"2")
+				mkdir $PontoMnt
+				echo -e "\nDiretório $PontoMnt criado!\n"
+				if [ ! -d $PontoMnt ]; then
+                                        CheckMnt="0"
+				else
+					CheckMnt="1"
+                                fi
+				;;
+			"3")
+				echo "exit..."
+				exit
+				;;				
+			*)	
+				sleep 0
+				;;
+		esac
+	done
+fi	
+
+echo -e "\nDiretório Selecionado: $PontoMnt\n"
+echo -e "Realmente deseja montar a partição $particao em $PontoMnt? \nS = Sim\nN = exit"
+echo ""
+resp=""
+if [ $tput = 1 ]; then
+	tput civis
+	while [ -z "$resp" ]; do
+			tput cuu1
+			tput el
+			tput cnorm
+			read -p ": " resp
+	done
+
+	tput cnorm
+else
+	while [ -z "$resp" ]; do
+		read -p "Sim ou não?: " resp
+	done
+fi
+tput cnorm
+
+if [ $resp = "S" ] || [ $resp = "s" ]; then
+	echo ""
+	mount $particao $PontoMnt
+	if [ $? = 0 ]; then
+		erro="0"
+	else
+		erro="1"
+		echo ""
+	fi
+else
+	echo "exit.."
+	exit
+fi
+
+if [ $erro != 0 ]; then
+	echo -e "\n\O comando mount não funcionou.. Talvez esta partição seja LVM, ou uma partição que não deve ser montada...n"
+else
+	echo -e "finalizado!\nConteudo da montagem: \n# ls -l $PontoMnt \n$(ls -l $PontoMnt)"
+fi
