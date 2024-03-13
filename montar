@@ -1,6 +1,7 @@
 #!/bin/bash
-# Feito por Josué Suptitz:
-# instagram: @josucazz
+# by: Josué Suptitz
+# @josucazz
+# github.com/JosucaZ
 
 
 
@@ -21,8 +22,8 @@ if [ $USER != "root" ]; then
 fi 
 
 if [ $temp1 = "false" ] && [ $temp2 = "false" ]; then
-	echo -e "\nPor favor execute como root...\n"
-	exit
+	echo -e "\nPor favor execute com privilégios...\n"
+	exit 1
 fi
 
 
@@ -41,7 +42,7 @@ number=$(($number-1))
 numberbkp=$number
 echo "NUMBER: $number"
 
-respEmBranco() {
+function respEmBranco() {
 	if [ $tput = 1 ]; then
 		tput civis
 		while [ -z "$resp" ]; do
@@ -62,7 +63,7 @@ respEmBranco() {
 	tput cnorm
 }
 
-mntEmBranco() {
+function mntEmBranco() {
 	if [ $tput = 1 ]; then
 		tput civis
 		while [ -z "$PontoMnt" ]; do
@@ -83,15 +84,15 @@ mntEmBranco() {
 
 
 clear
-echo -e "\nMontar Partições\nby:\n"
-echo " :::::::::::  ::::::::   ::::::::  :::    :::  ::::::::      :::     ::::::::: ::::::::: "
-echo "     :+:     :+:    :+: :+:    :+: :+:    :+: :+:    :+:   :+: :+:        :+:       :+:  "
-echo "     +:+     +:+    +:+ +:+        +:+    +:+ +:+         +:+   +:+      +:+       +:+   "
-echo "     +#+     +#+    +:+ +#++:++#++ +#+    +:+ +#+        +#++:++#++:    +#+       +#+    "
-echo "     +#+     +#+    +#+        +#+ +#+    +#+ +#+        +#+     +#+   +#+       +#+     "
-echo " #+# #+#     #+#    #+# #+#    #+# #+#    #+# #+#    #+# #+#     #+#  #+#       #+#      "
-echo "  #####       ########   ########   ########   ########  ###     ### ######### ######### "
-echo ""
+echo -e "\nMontar Partições\nby: Josué Suptitz"
+#echo " :::::::::::  ::::::::   ::::::::  :::    :::  ::::::::      :::     ::::::::: ::::::::: "
+#echo "     :+:     :+:    :+: :+:    :+: :+:    :+: :+:    :+:   :+: :+:        :+:       :+:  "
+#echo "     +:+     +:+    +:+ +:+        +:+    +:+ +:+         +:+   +:+      +:+       +:+   "
+#echo "     +#+     +#+    +:+ +#++:++#++ +#+    +:+ +#+        +#++:++#++:    +#+       +#+    "
+#echo "     +#+     +#+    +#+        +#+ +#+    +#+ +#+        +#+     +#+   +#+       +#+     "
+#echo " #+# #+#     #+#    #+# #+#    #+# #+#    #+# #+#    #+# #+#     #+#  #+#       #+#      "
+#echo "  #####       ########   ########   ########   ########  ###     ### ######### ######### "
+#echo ""
 
 
 echo -e "\nQual partição deseja montar?:\n"
