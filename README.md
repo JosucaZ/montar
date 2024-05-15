@@ -13,7 +13,7 @@ Para adicionar o script ao ambiente, siga os passos abaixo:
 
 2. Mova o script para o diretório '/usr/sbin/':
     ```bash
-    sudo cp /montar/montar /usr/sbin/
+    sudo cp montar/montar /usr/sbin/
     ```
 
 3. Dê permissões de execução ao script:
